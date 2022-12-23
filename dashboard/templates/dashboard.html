@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div>
+        <h1>DASHBOARD!</h1>
+    </div>
+    <div>
+        <h3>Batería: </h3> <h3 id="batVal">-</h3>
+    </div>
+
+    <div>
+        <div>
+            <form method="post">
+                <input type="text" placeholder="Nombre de archivo..." id="inputFilename">
+                {% csrf_token %}
+                <button type="button" onClick="performMeasurement()"> Realizar Medición </button>
+            </form>        
+    </div>
+    
+    <div>
+        <table id="tableFiles">
+            <!-- <tr>
+              <th>Fecha</th>
+              <th>Archivo</th>
+              <th>Descarga</th>
+            </tr>
+            <tr>
+              <td>01-01-2022</td>
+              <td><a href="#">medicion_1.xyz</a></td>
+              <td>-</td>
+            </tr>
+            <tr>
+              <td>01-01-2022</td>
+              <td><a href="#">medicion_2.xyz</a></td>
+              <td>-</td>
+            </tr>
+          </table>  -->
+    </div>
+</body>
+</html>
+
+<script>
+    var performingMeasurement = false;
+
+    function performMeasurement()
+    {
+        if(performingMeasurement === false)
+        {
+            performingMeasurement = true;
+            filename = document.getElementById("inputFilename").value;
+
+            data = {
+                "filename": filename,
+            };
+            socket.send(JSON.stringify(data));
+        }
+        else
+        {
+            console.log("Actualmente se está realizando una medición...")
+        }
+        
+    }
+
+    function loadTable(id, items) {
+        const table = document.getElementById(id);
+
+        table.innerHTML = "";
+
+        table.createTHead();
+        table.createTBody();
+        
+        header = document.querySelector("thead");
+        
+        let row = header.insertRow(0);
+        let date = row.insertCell(0);
+        date.innerHTML = "Fecha";
+        let name = row.insertCell(1);
+        name.innerHTML = "Archivo";
+        
+        body = document.querySelector("tbody");
+
+        items.forEach( item => {
+            let row = header.insertRow();
+            let date = row.insertCell(0);
+            date.innerHTML = item[0];
+            let name = row.insertCell(1);
+            name.innerHTML = item[1];
+        });
+    }
+
+    var socket= new WebSocket("ws://localhost:8000/ws/fake_faro_data/");
+    
+    socket.onmessage = function(e){
+        var djangoData = JSON.parse(e.data);
+        
+        /*
+            Si la data tiene la llave 'elapsedTime' significa que finalizó una medición.
+            Se debe llevar la variable booleana 'performingMeasurement' a 'false' y se
+            debe actualizar la tabla de archivos
+        */
+
+        if(djangoData.hasOwnProperty("elapsedTime"))
+        {
+            console.log("Medición finalizada!")
+            performingMeasurement = false;
+            
+            loadTable("tableFiles", djangoData.files);
+        }
+        else
+        {
+            console.log(djangoData);
+            document.getElementById("batVal").innerText = djangoData.batVal
+
+            loadTable("tableFiles", djangoData.files);
+        }
+    }
+
+</script>
